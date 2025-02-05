@@ -47,5 +47,4 @@ if __name__ == "__main__":
         asyncio.run(main()) 
     except KeyboardInterrupt:
         print("Бот выключен!")
-        logging.info("Bot has been stopped.")  
-        asyncio.run(log_user_action(None, "bot_stop", "Bot has been stopped"))
+        logging.info("Bot has been stopped.") 
