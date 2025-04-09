@@ -29,7 +29,7 @@ async def job():
         logging.error(f"Error in populate database task: {str(e)}")
         await log_user_action(None, "task_error", f"Error in populate database task: {str(e)}")
 
-async def monthly_export():
+async def weekly_export():
     """
     Функция для выполнения задачи экспорта статистики пользователей в Excel.
     Логирует начало и завершение задачи, а также ошибки, если они возникли.
@@ -52,7 +52,7 @@ async def monthly_export():
 
 schedule.every().hour.at(':00').do(lambda: asyncio.create_task(job()))  
 schedule.every().hour.at(':30').do(lambda: asyncio.create_task(job())) 
-schedule.every().monday.at("00:00").do(lambda: asyncio.create_task(monthly_export())) 
+schedule.every().monday.at("00:00").do(lambda: asyncio.create_task(weekly_export())) 
 
 async def scheduler():
     """

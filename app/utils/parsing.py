@@ -3,6 +3,7 @@ from oauth2client.service_account import ServiceAccountCredentials
 import dotenv
 import os
 import re
+from collections import defaultdict
 
 dotenv.load_dotenv()
 
@@ -12,10 +13,35 @@ spreadsheet_id = os.getenv('SPREADSHEET_ID')
 sheet_name = os.getenv('SHEET_NAMES').strip().split(',')
 data_range = os.getenv('DATA_RANGES').strip().split(',')
 
-# Объект авторизации
-scope = ['https://spreadsheets.google.com/feeds',
-         'https://www.googleapis.com/auth/drive']
+def group_brands_and_lines(items: list[str]) -> dict[str, list[str]]:
+    items = list(set(i.strip() for i in items if i.strip()))  # Убираем дубли и пробелы
+    items_sorted = sorted(items, key=lambda x: -len(x))  # Длинные сначала
+    result = defaultdict(list)
 
+    for item in items_sorted:
+        matched = False
+        for potential_brand in items_sorted:
+            if item == potential_brand:
+                continue
+            if item.upper().startswith(potential_brand.upper() + " "):
+                line = item[len(potential_brand):].strip()
+                result[potential_brand].append(line)
+                matched = True
+                break
+        if not matched:
+            result[item]  # Просто бренд без линеек
+
+    return dict(result)
+
+def split_brand_line(full_name: str, categories_brand: list[str]) -> tuple[str, str]:
+    for brand in sorted(categories_brand, key=lambda x: -len(x)):  # Длинные сначала
+        if full_name.upper().startswith(brand.upper()):
+            line = full_name[len(brand):].strip()
+            return brand, line
+    return full_name, ''  # Если бренд не найден
+
+# Авторизация
+scope = ['https://spreadsheets.google.com/feeds', 'https://www.googleapis.com/auth/drive']
 credentials = ServiceAccountCredentials.from_json_keyfile_name(credentials_file, scope)
 client = gspread.authorize(credentials)
 spreadsheet = client.open_by_key(spreadsheet_id)
@@ -26,40 +52,57 @@ vapes_tags_db = []
 vapes_db = []
 
 vape_list = []
-for sh_name, dt_range in zip(sheet_name, data_range):
+prefixs = []
 
+place = ['НА РАБОТЕ - ПЛОЩАДЬ ЛЕНИНА', 'ДОМА - КОЛОДИЩИ']
+stop_worlds = ['Испарители']
+replace_text = [' NEW!', ' (Заводской никотин, БЕЗ бустера)', ]
+
+for sh_name, dt_range in zip(sheet_name, data_range):
     sheet = spreadsheet.worksheet(sh_name)
     data = sheet.get(dt_range)
-
-    replace_text = [' NEW!', ' (Заводской никотин, БЕЗ бустера)', ]
-    categories_brand = ['СЛОВО ПАЦАНА', 'HotSpot', 'ГРЕХ', 'NICE SHOT',
-                        'АНАРХИЯ', 'РИК И МОРТИ', 'ISTERIKA', 'Glitch Sauce',
-                        'Самоубийца', 'Солевая Монашка', 'PODONKI', 'BLOOD',
-                        'DOTA', 'CATSWILL', 'FAFF', 'RELL', 
-                        'ELFLIQ', 'ZEUS', 'PROTEST', 'DUALL',
-                        'D.L.T.A.', 'Deluxe PUBG', 'ТАКСЕБЕ',
-                        'TRAFFIC', 'MAD ICE', 'TOXIC', 'PUBG']
-    
-    place = ['НА РАБОТЕ - ПЛОЩАДЬ ЛЕНИНА', 'ДОМА - КОЛОДИЩИ']
-
-
-
     type = 'preorder' if sh_name == 'Заказы - Жидкости' else 'resale'
+
+    prefix = ''
+    categories_brand = list(group_brands_and_lines(prefixs))
     for row in data:
-        if not row:
+        if not row or row[0] in place:
             prefix = ''
-            next
-        elif row[0] in place:
-            next
-        elif (len(row) == 1) or (len(row) < 4):
-            prefix = row[0].replace(replace_text[0], '').replace(replace_text[1], '').replace('Rick And Morty', 'РИК И МОРТИ')
-            preprefix = [item.upper() for item in categories_brand if item.upper() in prefix.upper()][0]
-            if preprefix not in brands_db.values():
-                brands_db[len(brands_db) + 1] = preprefix
-        elif len(row) != 1 and prefix != '':
-            brand_id = next((k for k, v in brands_db.items() if v == preprefix), None)
-            vape_list += [[row[0].split('—')[-1].strip()] + [brand_id] + [prefix.strip()] + [i.strip() if i == 'Есть' else '' for i in row[1:3]] + [type] + [float(row[3].replace(',', '.'))]]
-        
+            continue
+
+        if len(row) < 4:
+            prefix = re.sub(r'\d{2,}ML\b', '',
+                row[0]
+                .replace(replace_text[0], '')
+                .replace(replace_text[1], '')
+                .replace('Rick And Morty', 'РИК И МОРТИ')
+            ).strip()
+            prefixs.append(prefix)
+
+            if prefix in stop_worlds:
+                continue
+
+            brand, line = split_brand_line(prefix, categories_brand)
+
+            if brand.upper() not in (v.upper() for v in brands_db.values()):
+                brands_db[len(brands_db) + 1] = brand
+
+        elif prefix != '':
+            brand, line = split_brand_line(prefix, categories_brand)
+            brand_id = next((k for k, v in brands_db.items() if v.upper() == brand.upper()), None)
+
+            vape_list.append([
+                row[0].split('—')[-1].strip(),  # вкус
+                brand_id,
+                brand,
+                line,
+                *(i.strip() if i == 'Есть' else '' for i in row[1:3]),  # наличие
+                type,
+                float(row[3].replace(',', '.'))  # цена
+            ])
+# Группировка по брендам и линейкам
+for row in vape_list[:30]:
+    print(row)
 vapes_db = []
   
 unique_rows = set()
@@ -113,7 +156,7 @@ for idx1, idx2, *rest in indexes:
         row_preorder[2],  
         availability_45_50_60,
         availability_20,
-        row_preorder[6] 
+        row_preorder[7] 
     ]
 
     result.append(merged_row)
@@ -125,16 +168,17 @@ vapes_db += result
 
 for index, row in enumerate(vape_list):
     if row[-2] == 'preorder':
-        vape_list[index] = vape_list[index][0:3] + [0 if vape_list[index][3] == 'Есть' else None] + [0 if vape_list[index][4] == 'Есть' else None] + [vape_list[index][6]]
+        vape_list[index] = vape_list[index][0:3] + [0 if vape_list[index][3] == 'Есть' else None] + [0 if vape_list[index][4] == 'Есть' else None] + [vape_list[index][7]]
     elif row[-2] == 'resale':
-        vape_list[index] = vape_list[index][0:3] + [-1 if vape_list[index][3] == 'Есть' else None] + [-1 if vape_list[index][4] == 'Есть' else None] + [vape_list[index][6]]
+        vape_list[index] = vape_list[index][0:3] + [-1 if vape_list[index][3] == 'Есть' else None] + [-1 if vape_list[index][4] == 'Есть' else None] + [vape_list[index][7]]
     else:
         print('Не соотв')
         
 vapes_db += vape_list
 
 vapes_db = [[index + 1] + row for index, row in enumerate(vapes_db)]
-
+for row in vapes_db[:30]:
+    print(row)
 tags = {
     '❄️ Лёд': ['ЛЕД', 'ЛЁД', 'АЙС', 'ICE', 'ХОЛОД', 'МОРОЖ', 'ICED', 'ХОЛОДНАЯ', 'СВЕЖАЯ'],
     '🍭 Сладкий': ['СЛАДК', 'СГУЩ', 'ГЕМАТОГЕН', 'Скитлс', 'Ананас', 'Манго', 'Земляника', 
@@ -239,4 +283,3 @@ for row in vaporizers:
 vaporizers_brand_db = [[brand_id, brand_name] for brand_name, brand_id in brand_dict.items()]
 resistances_db = [[resistance_id, resistance] for resistance, resistance_id in resistance_dict.items()]
 
-    

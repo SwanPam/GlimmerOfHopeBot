@@ -27,11 +27,12 @@ availability_condition_to_order = or_(
 async def populate_database_from_parsing():
     """
     Заполняет базу данных данными из парсинга, удаляя предыдущие записи.
+    Ошибки при добавлении отдельных записей логируются, остальные продолжают добавляться.
     """
-    
+
     try:
         logging.info(f"Начало добавления данных в базу данных. Время: {datetime.now()}")
-        
+
         async with async_session() as session:
             await session.execute(text('DELETE FROM tags'))
             await session.execute(text('DELETE FROM brands'))
@@ -41,40 +42,77 @@ async def populate_database_from_parsing():
             await session.execute(text('DELETE FROM vaporizer_brands'))
             await session.execute(text('DELETE FROM vaporizer_resistances'))
             await session.commit()
-            
+
             logging.info(f"Старые записи успешно удалены. Время: {datetime.now()}")
-        
+
         async with async_session() as session:
             logging.info(f"Начало добавления новых записей. Время: {datetime.now()}")
-            
+
+            # Добавление тегов
             for tag in tags_db.values():
-                session.add(Tag(name=tag))
+                try:
+                    session.add(Tag(name=tag))
+                except Exception as e:
+                    logging.warning(f"Ошибка при добавлении тега '{tag}': {e}")
+
+            # Добавление брендов
             for brand in brands_db.values():
-                session.add(Brand(name=brand))
+                try:
+                    session.add(Brand(name=brand))
+                except Exception as e:
+                    logging.warning(f"Ошибка при добавлении бренда '{brand}': {e}")
+
+            # Добавление вейпов
             for vape in vapes_db:
-                session.add(Vape(name=vape[1],
-                                 brand_id=vape[2],
-                                 brand_line_up=vape[3],
-                                 availability_45_50_60=vape[4],
-                                 availability_20=vape[5],
-                                 price=vape[6]))
+                try:
+                    if vape[2] is None:
+                        continue
+                    session.add(Vape(name=vape[1],
+                                     brand_id=vape[2],
+                                     brand_line_up=vape[3],
+                                     availability_45_50_60=vape[4],
+                                     availability_20=vape[5],
+                                     price=vape[6]))
+                except Exception as e:
+                    logging.warning(f"Ошибка при добавлении вейпа '{vape}': {e}")
+
+            # Теги к вейпам
             for vape_tag in vapes_tags_db:
-                session.add(Vape_Tage(vape_id=vape_tag[0], tag_id=vape_tag[1]))
+                try:
+                    session.add(Vape_Tage(vape_id=vape_tag[0], tag_id=vape_tag[1]))
+                except Exception as e:
+                    logging.warning(f"Ошибка при добавлении vape_tag '{vape_tag}': {e}")
+
+            # Бренды испарителей
             for brand in vaporizers_brand_db:
-                session.add(VaporizerBrand(id=brand[0], name=brand[1]))
+                try:
+                    session.add(VaporizerBrand(id=brand[0], name=brand[1]))
+                except Exception as e:
+                    logging.warning(f"Ошибка при добавлении бренда испарителя '{brand}': {e}")
+
+            # Сопротивления испарителей
             for resistance in resistances_db:
-                session.add(VaporizerResistance(id=resistance[0], value=resistance[1]))
+                try:
+                    session.add(VaporizerResistance(id=resistance[0], value=resistance[1]))
+                except Exception as e:
+                    logging.warning(f"Ошибка при добавлении сопротивления '{resistance}': {e}")
+
+            # Испарители
             for vaporizer in vaporizers_db:
-                session.add(Vaporizer(brand_id=vaporizer[0],
-                                       resistance_id=vaporizer[1],
-                                       price=vaporizer[2]))
-            
+                try:
+                    session.add(Vaporizer(brand_id=vaporizer[0],
+                                          resistance_id=vaporizer[1],
+                                          price=vaporizer[2]))
+                except Exception as e:
+                    logging.warning(f"Ошибка при добавлении испарителя '{vaporizer}': {e}")
+
             await session.commit()
-            
+
             logging.info(f"Новые данные успешно добавлены в базу данных. Время: {datetime.now()}")
-    
+
     except Exception as e:
         logging.error(f"Произошла ошибка при добавлении данных: {e}")
+
 
 
 async def get_brands(search_in: str):

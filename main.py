@@ -5,7 +5,7 @@ from app.core.handlers import router
 from app.database.models import async_main
 from app.utils.schedule import scheduler
 from app.utils.logger import log_user_action
-
+from app.database.requests import populate_database_from_parsing
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s",)
 
 
@@ -30,6 +30,7 @@ async def main():
         asyncio.create_task(scheduler())  # Запуск планировщика асинхронных задач
         
         logging.info("Bot is starting polling.")
+        await populate_database_from_parsing()
         await dp.start_polling(bot)  # Запуск polling для получения обновлений от бота
 
     except Exception as e:
