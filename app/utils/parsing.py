@@ -64,6 +64,7 @@ for sh_name, dt_range in zip(sheet_name, data_range):
     type = 'preorder' if sh_name == 'Заказы - Жидкости' else 'resale'
 
     prefix = ''
+    
     categories_brand = list(group_brands_and_lines(prefixs))
     for row in data:
         if not row or row[0] in place:
@@ -100,6 +101,9 @@ for sh_name, dt_range in zip(sheet_name, data_range):
                 type,
                 float(row[3].replace(',', '.'))  # цена
             ])
+for row in vape_list[-30:]:
+    pass
+    #print(row)
 # Группировка по брендам и линейкам
 vapes_db = []
   
@@ -115,7 +119,7 @@ for item in vape_list:
                         
 vape_list = result.copy()
 name_brand_id_list = [[row[0], row[1]] for row in vape_list]
-vape_list_resale = [row for row in vape_list if row[5] == 'resale']
+vape_list_resale = [row for row in vape_list if row[6] == 'resale']
 indexes = []
 for index, row in enumerate(vape_list_resale):
     if name_brand_id_list.count([row[0], row[1]]) > 1:
@@ -126,25 +130,25 @@ for idx1, idx2, *rest in indexes:
     row1 = vape_list[idx1]
     row2 = vape_list[idx2]
 
-    if row1[5] == 'preorder' and row2[5] == 'resale':
+    if row1[6] == 'preorder' and row2[6] == 'resale':
         row_preorder, row_resale = row1, row2
-    elif row1[5] == 'resale' and row2[5] == 'preorder':
+    elif row1[6] == 'resale' and row2[6] == 'preorder':
         row_preorder, row_resale = row2, row1
     else:
         print('Не соответствие')
         continue
-        
+    print(row_resale)
     availability_45_50_60 = (
-        1 if row_resale[3] == 'Есть' and row_preorder[3] == 'Есть' else
-        -1 if row_resale[3] == 'Есть' and row_preorder[3] == '' else
-        0 if row_resale[3] == '' and row_preorder[3] == 'Есть' else
+        1 if row_resale[4] == 'Есть' and row_preorder[4] == 'Есть' else
+        -1 if row_resale[4] == 'Есть' and row_preorder[4] == '' else
+        0 if row_resale[4] == '' and row_preorder[4] == 'Есть' else
         None
     )
 
     availability_20 = (
-        1 if row_resale[4] == 'Есть' and row_preorder[4] == 'Есть' else
-        -1 if row_resale[4] == 'Есть' and row_preorder[4] == '' else
-        0 if row_resale[5] == '' and row_preorder[4] == 'Есть' else
+        1 if row_resale[5] == 'Есть' and row_preorder[5] == 'Есть' else
+        -1 if row_resale[5] == 'Есть' and row_preorder[5] == '' else
+        0 if row_resale[5] == '' and row_preorder[5] == 'Есть' else
         None
     )
 
@@ -166,15 +170,17 @@ vapes_db += result
 
 for index, row in enumerate(vape_list):
     if row[-2] == 'preorder':
-        vape_list[index] = vape_list[index][0:3] + [0 if vape_list[index][3] == 'Есть' else None] + [0 if vape_list[index][4] == 'Есть' else None] + [vape_list[index][7]]
+        vape_list[index] = vape_list[index][0:3] + [0 if vape_list[index][4] == 'Есть' else None] + [0 if vape_list[index][5] == 'Есть' else None] + [vape_list[index][7]]
     elif row[-2] == 'resale':
-        vape_list[index] = vape_list[index][0:3] + [-1 if vape_list[index][3] == 'Есть' else None] + [-1 if vape_list[index][4] == 'Есть' else None] + [vape_list[index][7]]
+        vape_list[index] = vape_list[index][0:3] + [-1 if vape_list[index][4] == 'Есть' else None] + [-1 if vape_list[index][5] == 'Есть' else None] + [vape_list[index][7]]
     else:
         print('Не соотв')
         
 vapes_db += vape_list
 
 vapes_db = [[index + 1] + row for index, row in enumerate(vapes_db)]
+for row in vapes_db[-30:]:
+    print(row)
 tags = {
     '❄️ Лёд': ['ЛЕД', 'ЛЁД', 'АЙС', 'ICE', 'ХОЛОД', 'МОРОЖ', 'ICED', 'ХОЛОДНАЯ', 'СВЕЖАЯ'],
     '🍭 Сладкий': ['СЛАДК', 'СГУЩ', 'ГЕМАТОГЕН', 'Скитлс', 'Ананас', 'Манго', 'Земляника', 
