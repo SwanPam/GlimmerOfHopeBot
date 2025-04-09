@@ -101,8 +101,6 @@ for sh_name, dt_range in zip(sheet_name, data_range):
                 float(row[3].replace(',', '.'))  # цена
             ])
 # Группировка по брендам и линейкам
-for row in vape_list[:30]:
-    print(row)
 vapes_db = []
   
 unique_rows = set()
@@ -177,8 +175,6 @@ for index, row in enumerate(vape_list):
 vapes_db += vape_list
 
 vapes_db = [[index + 1] + row for index, row in enumerate(vapes_db)]
-for row in vapes_db[:30]:
-    print(row)
 tags = {
     '❄️ Лёд': ['ЛЕД', 'ЛЁД', 'АЙС', 'ICE', 'ХОЛОД', 'МОРОЖ', 'ICED', 'ХОЛОДНАЯ', 'СВЕЖАЯ'],
     '🍭 Сладкий': ['СЛАДК', 'СГУЩ', 'ГЕМАТОГЕН', 'Скитлс', 'Ананас', 'Манго', 'Земляника', 
