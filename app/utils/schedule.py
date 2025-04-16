@@ -8,7 +8,7 @@ from app.utils.statistics import export_users_to_excel
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s",)
 
 
-async def job():
+async def populate_database_task():
     """
     Функция для выполнения задачи по заполнению базы данных из данных парсинга.
     Логирует начало и завершение задачи, а также ошибки, если они возникли.
@@ -29,7 +29,7 @@ async def job():
         logging.error(f"Error in populate database task: {str(e)}")
         await log_user_action(None, "task_error", f"Error in populate database task: {str(e)}")
 
-async def weekly_export():
+async def export_statistic_task():
     """
     Функция для выполнения задачи экспорта статистики пользователей в Excel.
     Логирует начало и завершение задачи, а также ошибки, если они возникли.
@@ -50,9 +50,9 @@ async def weekly_export():
         logging.error(f"Error in user statistics export: {str(e)}")
         await log_user_action(None, "task_error", f"Error in user statistics export: {str(e)}")
 
-schedule.every().hour.at(':00').do(lambda: asyncio.create_task(job()))  
-schedule.every().hour.at(':30').do(lambda: asyncio.create_task(job())) 
-schedule.every().monday.at("00:00").do(lambda: asyncio.create_task(weekly_export())) 
+schedule.every().hour.at(':00').do(lambda: asyncio.create_task(populate_database_task()))  
+schedule.every().hour.at(':30').do(lambda: asyncio.create_task(populate_database_task())) 
+schedule.every().monday.at("00:00").do(lambda: asyncio.create_task(export_statistic_task())) 
 
 async def scheduler():
     """
