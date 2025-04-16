@@ -57,7 +57,8 @@ DATA_RANGE_VAPORIZERS = A1:B100
   "universe_domain": "googleapis.com"
 }
 ```
-
+## Дополнительная информация
+Описание некоторых ключевых особенностей в разгработке и реализации описано здесь - https://www.notion.so/GlimmerOfHopeBot-1d01d1601da380c69119eac8508abba3?pvs=4.
 ## Используемые технологии
 - Python
 - Aiogram (для работы с Telegram API)
